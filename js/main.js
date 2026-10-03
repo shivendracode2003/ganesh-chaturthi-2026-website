@@ -51,6 +51,97 @@
     tick();
     setInterval(tick, 30000);
 
+    const githubUsername = 'shivendracode2003';
+    const repoList = document.getElementById('repo-list');
+    const repoStatus = document.getElementById('repo-status');
+
+    function addRepository(repo) {
+        const article = document.createElement('article');
+        article.className = 'repo-card';
+
+        const heading = document.createElement('h3');
+        heading.textContent = repo.name;
+        article.appendChild(heading);
+
+        const description = document.createElement('p');
+        description.textContent = repo.description || 'A published GitHub Pages project.';
+        article.appendChild(description);
+
+        if (repo.language) {
+            const language = document.createElement('span');
+            language.className = 'repo-language';
+            language.textContent = repo.language;
+            article.appendChild(language);
+        }
+
+        const actions = document.createElement('div');
+        actions.className = 'repo-actions';
+
+        if (repo.has_pages) {
+            const liveLink = document.createElement('a');
+            liveLink.className = 'btn';
+            liveLink.href = repo.homepage || (repo.name.toLowerCase() === githubUsername + '.github.io'
+                ? 'https://' + githubUsername + '.github.io/'
+                : 'https://' + githubUsername + '.github.io/' + encodeURIComponent(repo.name) + '/');
+            liveLink.target = '_blank';
+            liveLink.rel = 'noopener noreferrer';
+            liveLink.textContent = 'Live site';
+            actions.appendChild(liveLink);
+        } else {
+            const pagesStatus = document.createElement('span');
+            pagesStatus.className = 'repo-language';
+            pagesStatus.textContent = 'GitHub Pages not enabled';
+            actions.appendChild(pagesStatus);
+        }
+
+        const sourceLink = document.createElement('a');
+        sourceLink.className = 'btn g';
+        sourceLink.href = repo.html_url;
+        sourceLink.target = '_blank';
+        sourceLink.rel = 'noopener noreferrer';
+        sourceLink.textContent = 'Source code';
+        actions.appendChild(sourceLink);
+
+        article.appendChild(actions);
+        repoList.appendChild(article);
+    }
+
+    async function loadPagesRepositories() {
+        if (!repoList || !repoStatus) return;
+
+        try {
+            const repositories = [];
+            let page = 1;
+            let batch;
+
+            do {
+                const response = await fetch('https://api.github.com/users/' + githubUsername +
+                    '/repos?per_page=100&page=' + page);
+                if (!response.ok) throw new Error('GitHub API returned ' + response.status);
+                batch = await response.json();
+                repositories.push(...batch);
+                page += 1;
+            } while (batch.length === 100);
+
+            const publicRepositories = repositories
+                .sort(function (a, b) { return a.name.localeCompare(b.name); });
+
+            if (publicRepositories.length === 0) {
+                repoStatus.textContent = 'No public repositories found. Browse github.com/' + githubUsername + ' for more.';
+                return;
+            }
+
+            publicRepositories.forEach(addRepository);
+            repoStatus.textContent = publicRepositories.length + ' public ' +
+                (publicRepositories.length === 1 ? 'repository' : 'repositories');
+        } catch (error) {
+            repoStatus.textContent = 'Could not load repositories right now. Visit github.com/' +
+                githubUsername + ' to browse the projects.';
+        }
+    }
+
+    loadPagesRepositories();
+
     const dlg = document.getElementById('dlg');
     const big = document.getElementById('big');
 
